@@ -1482,6 +1482,21 @@ SQL;
         return $storedCrit;
     }
 
+    private function resolveDate($value)
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        return preg_replace_callback(
+            "/date{(.*?)}/",
+            function ($matches) {
+                return date($matches[1]);
+            },
+            $value
+        );
+    }
+
     // this function return list of propel object
     public function getListofFilesMeetCriteria($showLimit = null)
     {
@@ -1548,6 +1563,8 @@ SQL;
                         }
                         $spCriteriaExtra = $criteria['extra'];
                     }
+
+                    $spCriteriaValue = $this->resolveDate($spCriteriaValue);
 
                     if ($spCriteriaModifier == 'starts with') {
                         $spCriteriaValue = "{$spCriteriaValue}%";
