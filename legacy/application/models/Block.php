@@ -1564,33 +1564,46 @@ SQL;
 
                     $spCriteriaValue = $this->resolveDate($spCriteriaValue);
 
-                    if ($spCriteriaModifier == 'starts with') {
-                        $spCriteriaValue = "{$spCriteriaValue}%";
-                    } elseif ($spCriteriaModifier == 'ends with') {
+                    // file paths are stored with a full path, so when searching a name we need to ignore the path
+                    if ($spCriteriaModifier == CriteriaModifier::STARTS_WITH) {
+                        if ($spCriteria == 'filepath') {
+                            $spCriteriaValue = '%' . DIRECTORY_SEPARATOR . "{$spCriteriaValue}%";
+                        } else {
+                            $spCriteriaValue = "{$spCriteriaValue}%";
+                        }
+                    } elseif ($spCriteriaModifier == CriteriaModifier::ENDS_WITH) {
                         $spCriteriaValue = "%{$spCriteriaValue}";
-                    } elseif ($spCriteriaModifier == 'contains' || $spCriteriaModifier == 'does not contain') {
+                    } elseif ($spCriteriaModifier == CriteriaModifier::CONTAINS || $spCriteriaModifier == CriteriaModifier::DOES_NOT_CONTAIN) {
                         $spCriteriaValue = "%{$spCriteriaValue}%";
-                    } elseif ($spCriteriaModifier == 'is in the range') {
+                    } elseif ($spCriteriaModifier == CriteriaModifier::IS_IN_THE_RANGE) {
                         $spCriteriaValue = "{$spCriteria} >= '{$spCriteriaValue}' AND {$spCriteria} <= '{$spCriteriaExtra}'";
-                    } elseif ($spCriteriaModifier == 'before') {
+                    } elseif ($spCriteriaModifier == CriteriaModifier::BEFORE) {
                         // need to pull in the current time and subtract the value or figure out how to make it relative
                         $relativedate = new DateTime($spCriteriaValue);
                         $dt = $relativedate->format(DateTime::ISO8601);
                         $spCriteriaValue = "COALESCE({$spCriteria}, DATE '-infinity') <= '{$dt}'";
-                    } elseif ($spCriteriaModifier == 'after') {
+                    } elseif ($spCriteriaModifier == CriteriaModifier::AFTER) {
                         $relativedate = new DateTime($spCriteriaValue);
                         $dt = $relativedate->format(DateTime::ISO8601);
                         $spCriteriaValue = "COALESCE({$spCriteria}, DATE '-infinity') >= '{$dt}'";
-                    } elseif ($spCriteriaModifier == 'between') {
+                    } elseif ($spCriteriaModifier == CriteriaModifier::BETWEEN) {
                         $fromrelativedate = new DateTime($spCriteriaValue);
                         $fdt = $fromrelativedate->format(DateTime::ISO8601);
 
                         $torelativedate = new DateTime($spCriteriaExtra);
                         $tdt = $torelativedate->format(DateTime::ISO8601);
                         $spCriteriaValue = "COALESCE({$spCriteria}, DATE '-infinity') >= '{$fdt}' AND COALESCE({$spCriteria}, DATE '-infinity') <= '{$tdt}'";
+                    } elseif ($spCriteria == 'filepath' && ($spCriteriaModifier == CriteriaModifier::IS || $spCriteriaModifier == CriteriaModifier::IS_NOT)) {
+                        $spCriteriaValue = '%' . DIRECTORY_SEPARATOR . "{$spCriteriaValue}";
                     }
 
-                    $spCriteriaModifier = self::$modifier2CriteriaMap[$spCriteriaModifier];
+                    if ($spCriteria == 'filepath' && $spCriteriaModifier == CriteriaModifier::IS) {
+                        $spCriteriaModifier = Criteria::LIKE;
+                    } elseif ($spCriteria == 'filepath' && $spCriteriaModifier == CriteriaModifier::IS_NOT) {
+                        $spCriteriaModifier = Criteria::NOT_ILIKE;
+                    } else {
+                        $spCriteriaModifier = self::$modifier2CriteriaMap[$spCriteriaModifier];
+                    }
 
                     try {
                         if ($spCriteria == 'owner_id') {
